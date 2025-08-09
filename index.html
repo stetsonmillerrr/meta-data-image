@@ -8,57 +8,93 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.js"></script>
   <style>
     body {
-      font-family: Arial, sans-serif;
+      font-family: 'Arial', sans-serif;
       padding: 20px;
-      background: #f3f3f3;
+      margin: 0;
+      background-color: #181818;
+      color: #ddd;
       text-align: center;
     }
+
     h1 {
-      color: #333;
+      color: #fff;
+      font-size: 1.8em;
+      margin-bottom: 20px;
     }
+
     .upload-area {
-      border: 2px dashed #008CBA;
+      border: 2px dashed #2196F3;
       padding: 30px;
       margin: 20px 0;
-      background-color: #fff;
+      background-color: #282828;
+      color: #ddd;
       cursor: pointer;
+      transition: background-color 0.3s ease;
     }
+
     .upload-area:hover {
-      background-color: #f1f1f1;
+      background-color: #333;
     }
+
     .preview {
       max-width: 100%;
+      max-height: 300px;
       margin-top: 20px;
       display: block;
       margin-left: auto;
       margin-right: auto;
-      max-height: 300px;
+      border-radius: 5px;
     }
+
     .meta, .location {
       margin-top: 20px;
-      padding: 10px;
-      background: #fff;
-      border: 1px solid #ccc;
+      padding: 20px;
+      background: #333;
+      border: 1px solid #444;
       text-align: left;
-      max-width: 800px;
+      font-family: 'Courier New', Courier, monospace;
+      max-width: 100%;
       margin-left: auto;
       margin-right: auto;
-      font-family: "Courier New", Courier, monospace;
+      color: #eee;
     }
-    .leaflet-container { height: 300px; }
+
+    .leaflet-container {
+      height: 300px;
+      border-radius: 8px;
+      margin-top: 20px;
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+
+    @media screen and (max-width: 600px) {
+      h1 {
+        font-size: 1.5em;
+      }
+      .meta, .location {
+        padding: 15px;
+        font-size: 0.9em;
+      }
+      .leaflet-container {
+        height: 250px;
+      }
+    }
+
   </style>
 </head>
 <body>
 
   <h1>Smart Image Metadata Extractor</h1>
-  
+
   <div id="uploadArea" class="upload-area">
     <p>Drag & Drop an image here or click to select one</p>
-    <input type="file" id="upload" accept="image/*" style="display: none;">
+    <input type="file" id="upload" accept="image/*">
   </div>
 
   <img id="preview" class="preview" />
-  
+
   <div id="output" class="meta"></div>
   <div id="location" class="location"></div>
 
@@ -72,24 +108,22 @@
     const locationOutput = document.getElementById('location');
     const mapContainer = document.getElementById('map');
 
-    const geocoder = new (window.Geolocation || {}).reverseGeocode || null;
-
     // Allow clicking on the drag area
     uploadArea.addEventListener('click', () => uploadInput.click());
     
     // Drag and drop event listeners
     uploadArea.addEventListener('dragover', (e) => {
       e.preventDefault();
-      uploadArea.style.background = '#f1f1f1';
+      uploadArea.style.background = '#444';
     });
 
     uploadArea.addEventListener('dragleave', () => {
-      uploadArea.style.background = '#fff';
+      uploadArea.style.background = '#282828';
     });
 
     uploadArea.addEventListener('drop', (e) => {
       e.preventDefault();
-      uploadArea.style.background = '#fff';
+      uploadArea.style.background = '#282828';
       handleFile(e.dataTransfer.files[0]);
     });
 
