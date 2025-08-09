@@ -68,6 +68,9 @@
       height: 400px;
       border-radius: 8px;
       margin-top: 20px;
+      max-width: 100%;
+      margin-left: auto;
+      margin-right: auto;
     }
 
     .loading {
@@ -109,6 +112,7 @@
   <div id="output" class="meta"></div>
   <div id="location" class="location"></div>
 
+  <!-- Map container placed below other content, it will only show once location data is found -->
   <div id="map" class="leaflet-container"></div>
   <div id="loading" class="loading" style="display: none;">Loading...</div>
 
