@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Image Metadata Extractor</title>
+  <script src="https://cdn.jsdelivr.net/npm/exif-js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/leaflet.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #f3f3f3;
+      text-align: center;
+    }
+    h1 {
+      color: #333;
+    }
+    .upload-area {
+      border: 2px dashed #008CBA;
+      padding: 30px;
+      margin: 20px 0;
+      background-color: #fff;
+      cursor: pointer;
+    }
+    .upload-area:hover {
+      background-color: #f1f1f1;
+    }
+    .preview {
+      max-width: 100%;
+      margin-top: 20px;
+      display: block;
+      margin-left: auto;
+      margin-right: auto;
+      max-height: 300px;
+    }
+    .meta, .location {
+      margin-top: 20px;
+      padding: 10px;
+      background: #fff;
+      border: 1px solid #ccc;
+      text-align: left;
+      max-width: 800px;
+      margin-left: auto;
+      margin-right: auto;
+      font-family: "Courier New", Courier, monospace;
+    }
+    .leaflet-container { height: 300px; }
+  </style>
+</head>
+<body>
+
+  <h1>Smart Image Metadata Extractor</h1>
+  
+  <div id="uploadArea" class="upload-area">
+    <p>Drag & Drop an image here or click to select one</p>
+    <input type="file" id="upload" accept="image/*" style="display: none;">
+  </div>
+
+  <img id="preview" class="preview" />
+  
+  <div id="output" class="meta"></div>
+  <div id="location" class="location"></div>
+
+  <div id="map" class="leaflet-container"></div>
+
+  <script>
+    const uploadArea = document.getElementById('uploadArea');
+    const uploadInput = document.getElementById('upload');
+    const preview = document.getElementById('preview');
+    const output = document.getElementById('output');
+    const locationOutput = document.getElementById('location');
+    const mapContainer = document.getElementById('map');
+
+    const geocoder = new (window.Geolocation || {}).reverseGeocode || null;
+
+    // Allow clicking on the drag area
+    uploadArea.addEventListener('click', () => uploadInput.click());
+    
+    // Drag and drop event listeners
+    uploadArea.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      uploadArea.style.background = '#f1f1f1';
+    });
+
+    uploadArea.addEventListener('dragleave', () => {
+      uploadArea.style.background = '#fff';
+    });
+
+    uploadArea.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadArea.style.background = '#fff';
+      handleFile(e.dataTransfer.files[0]);
+    });
+
+    uploadInput.addEventListener('change', () => handleFile(uploadInput.files[0]));
+
+    function handleFile(file) {
+      if (!file) return;
+
+      // Show preview of image
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        preview.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+
+      // Read EXIF metadata
+      EXIF.getData(file, function () {
+        const allMetaData = EXIF.getAllTags(this);
+        if (Object.keys(allMetaData).length === 0) {
+          output.textContent = 'No EXIF metadata found.';
+          locationOutput.textContent = '';
+          mapContainer.innerHTML = '';
+          return;
+        }
+
+        let result = 'Metadata:\n\n';
+        for (const tag in allMetaData) {
+          if (allMetaData.hasOwnProperty(tag)) {
+            result += `${tag}: ${allMetaData[tag]}\n`;
+          }
+        }
+
+        output.textContent = result;
+
+        // Check for GPS coordinates and add reverse geocoding
+        if (allMetaData.GPSLatitude && allMetaData.GPSLongitude) {
+          const lat = convertDMSToDD(allMetaData.GPSLatitude, allMetaData.GPSLatitudeRef);
+          const lon = convertDMSToDD(allMetaData.GPSLongitude, allMetaData.GPSLongitudeRef);
+
+          // Display GPS Location
+          locationOutput.textContent = `Latitude: ${lat}\nLongitude: ${lon}`;
+          
+          // Reverse geocode the coordinates
+          fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`)
+            .then(res => res.json())
+            .then(data => {
+              locationOutput.textContent += `\nLocation: ${data.display_name}`;
+            }).catch(() => {
+              locationOutput.textContent += '\nUnable to fetch location.';
+            });
+
+          // Show map with marker
+          showMap(lat, lon);
+        } else {
+          locationOutput.textContent = 'No GPS data available.';
+          mapContainer.innerHTML = '';
+        }
+      });
+    }
+
+    // Convert GPS from DMS (Degrees, Minutes, Seconds) to Decimal Degrees
+    function convertDMSToDD(dms, ref) {
+      const [degrees, minutes, seconds] = dms;
+      let dd = degrees + minutes / 60 + seconds / 3600;
+      if (ref === 'S' || ref === 'W') dd = -dd;
+      return dd.toFixed(6);
+    }
+
+    // Show a map with Leaflet
+    function showMap(lat, lon) {
+      mapContainer.innerHTML = ''; // Clear previous map
+      const map = L.map(mapContainer).setView([lat, lon], 13);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+      }).addTo(map);
+      L.marker([lat, lon]).addTo(map)
+        .bindPopup(`Location: ${lat}, ${lon}`)
+        .openPopup();
+    }
+  </script>
+</body>
+</html>
