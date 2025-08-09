@@ -57,11 +57,19 @@
       margin-left: auto;
       margin-right: auto;
       color: #eee;
+      white-space: pre-wrap;
+      text-align: left;
     }
 
     .leaflet-container {
       height: 300px;
       border-radius: 8px;
+      margin-top: 20px;
+    }
+
+    .loading {
+      color: #fff;
+      font-size: 1.2em;
       margin-top: 20px;
     }
 
@@ -99,6 +107,7 @@
   <div id="location" class="location"></div>
 
   <div id="map" class="leaflet-container"></div>
+  <div id="loading" class="loading" style="display: none;">Loading...</div>
 
   <script>
     const uploadArea = document.getElementById('uploadArea');
@@ -107,6 +116,7 @@
     const output = document.getElementById('output');
     const locationOutput = document.getElementById('location');
     const mapContainer = document.getElementById('map');
+    const loadingText = document.getElementById('loading');
 
     // Allow clicking on the drag area
     uploadArea.addEventListener('click', () => uploadInput.click());
@@ -132,6 +142,12 @@
     function handleFile(file) {
       if (!file) return;
 
+      // Show loading state
+      loadingText.style.display = 'block';
+      output.textContent = '';
+      locationOutput.textContent = '';
+      mapContainer.innerHTML = '';
+
       // Show preview of image
       const reader = new FileReader();
       reader.onload = function (e) {
@@ -142,31 +158,32 @@
       // Read EXIF metadata
       EXIF.getData(file, function () {
         const allMetaData = EXIF.getAllTags(this);
+        let result = 'Metadata:\n\n';
+
         if (Object.keys(allMetaData).length === 0) {
-          output.textContent = 'No EXIF metadata found.';
-          locationOutput.textContent = '';
+          result = 'No EXIF metadata found.';
+          output.textContent = result;
+          locationOutput.textContent = 'No location data found.';
           mapContainer.innerHTML = '';
+          loadingText.style.display = 'none';
           return;
         }
 
-        let result = 'Metadata:\n\n';
+        // Show all EXIF data
         for (const tag in allMetaData) {
           if (allMetaData.hasOwnProperty(tag)) {
             result += `${tag}: ${allMetaData[tag]}\n`;
           }
         }
-
         output.textContent = result;
 
-        // Check for GPS coordinates and add reverse geocoding
+        // Check for GPS coordinates and reverse geocode
         if (allMetaData.GPSLatitude && allMetaData.GPSLongitude) {
           const lat = convertDMSToDD(allMetaData.GPSLatitude, allMetaData.GPSLatitudeRef);
           const lon = convertDMSToDD(allMetaData.GPSLongitude, allMetaData.GPSLongitudeRef);
 
-          // Display GPS Location
           locationOutput.textContent = `Latitude: ${lat}\nLongitude: ${lon}`;
-          
-          // Reverse geocode the coordinates
+
           fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}`)
             .then(res => res.json())
             .then(data => {
@@ -181,6 +198,8 @@
           locationOutput.textContent = 'No GPS data available.';
           mapContainer.innerHTML = '';
         }
+
+        loadingText.style.display = 'none';
       });
     }
 
@@ -204,5 +223,6 @@
         .openPopup();
     }
   </script>
+
 </body>
 </html>
